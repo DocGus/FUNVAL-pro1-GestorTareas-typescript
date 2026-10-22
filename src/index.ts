@@ -46,7 +46,7 @@ const addTask = (title: string): void => {
   console.log('Tarea agregada: ' + newTask.title + ' (ID: ' + newTask.id + ')');
 };
 
-// Función flecha para listar las tareas
+// Función para listar tareas usando destructuring, map() y forEach()
 const listTasks = (): void => {
   console.log('\n===== LISTA DE TAREAS =====');
 
@@ -55,11 +55,16 @@ const listTasks = (): void => {
     return;
   }
 
-  for (const task of tasks) {
-    const status: string = task.completed ? 'completed' : 'pending';
+  const formattedTasks: string[] = tasks.map((task) => {
+    const { id, title, completed } = task;
+    const status: string = completed ? 'completed' : 'pending';
 
-    console.log('[' + task.id + '] ' + task.title + ' - ' + status);
-  }
+    return '[' + id + '] ' + title + ' - ' + status;
+  });
+
+  formattedTasks.forEach((task) => {
+    console.log(task);
+  });
 };
 
 // Función flecha para eliminar la última tarea
@@ -73,16 +78,62 @@ const removeTask = (): void => {
   }
 };
 
+// Función para marcar una tarea como completada usando find()
+const markCompleted = (id: number): void => {
+  const task = tasks.find((task) => task.id === id);
+
+  if (task) {
+    if (task.completed) {
+      console.log('La tarea ya estaba completada: ' + task.title);
+    } else {
+      task.completed = true;
+      console.log('Tarea completada: ' + task.title);
+    }
+  } else {
+    console.log('No se encontró una tarea con el ID ' + id);
+  }
+};
+
+// Función para obtener las tareas pendientes usando filter()
+const filterPending = (): Task[] => {
+  return tasks.filter((task) => !task.completed);
+};
+
+// Función para obtener las tareas completadas usando filter()
+const filterCompleted = (): Task[] => {
+  return tasks.filter((task) => task.completed);
+};
+
+// Función para mostrar una lista filtrada de tareas
+const showFilteredTasks = (filteredTasks: Task[], heading: string): void => {
+  console.log('\n===== ' + heading + ' =====');
+
+  if (filteredTasks.length === 0) {
+    console.log('No hay tareas en esta categoría.');
+    return;
+  }
+
+  filteredTasks
+    .map(({ id, title, completed }) => {
+      const status: string = completed ? 'completed' : 'pending';
+      return '[' + id + '] ' + title + ' - ' + status;
+    })
+    .forEach((task) => console.log(task));
+};
+
 // Menú interactivo
 async function main(): Promise<void> {
   let option: string = '';
 
-  while (option !== '4') {
+  while (option !== '7') {
     console.log('\n===== MENÚ DE TAREAS =====');
     console.log('1. Agregar tarea');
     console.log('2. Eliminar última tarea');
-    console.log('3. Listar tareas');
-    console.log('4. Salir');
+    console.log('3. Listar todas las tareas');
+    console.log('4. Marcar tarea como completada');
+    console.log('5. Listar tareas pendientes');
+    console.log('6. Listar tareas completadas');
+    console.log('7. Salir');
 
     option = await rl.question('Selecciona una opción: ');
 
@@ -99,9 +150,22 @@ async function main(): Promise<void> {
     } else if (option === '3') {
       listTasks();
     } else if (option === '4') {
+      const idInput = await rl.question('Escribe el ID de la tarea: ');
+      const id = Number(idInput);
+
+      if (idInput.trim() !== '' && Number.isInteger(id) && id > 0) {
+        markCompleted(id);
+      } else {
+        console.log('Ingresa un ID válido.');
+      }
+    } else if (option === '5') {
+      showFilteredTasks(filterPending(), 'TAREAS PENDIENTES');
+    } else if (option === '6') {
+      showFilteredTasks(filterCompleted(), 'TAREAS COMPLETADAS');
+    } else if (option === '7') {
       console.log('Saliendo del menú. ¡Hasta pronto, ' + userName + '!');
     } else {
-      console.log('Opción no válida. Selecciona del 1 al 4.');
+      console.log('Opción no válida. Selecciona del 1 al 7.');
     }
   }
 }
