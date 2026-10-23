@@ -3,174 +3,247 @@ import readline from 'readline/promises';
 import { stdin as input, stdout as output } from 'process';
 
 const rl = readline.createInterface({ input, output });
-// 🚫 No eliminar las líneas de arriba ⬆️
 
-// ✍️ Código del lunes: variables y banner
+const userName: string = 'Gustavo Andres';
+const systemName: string = 'Mi primer Sistema';
+const version: number = 1;
 
-const systemName: string = 'FUNVAL Developer Platform';
-const version: number = 1.0;
-const userName: string = 'Gus';
-
-const nextVersion: number = version + 0.1;
-
-console.log('==================================');
-console.log('  ' + systemName + ' v' + nextVersion);
-console.log('  ¡Bienvenido, ' + userName + '!');
-console.log('  Cálculo de versión: ' + version + ' + 0.1 = ' + nextVersion);
-console.log('==================================');
-
-// Interfaz para definir la estructura de una tarea
 interface Task {
   id: number;
   title: string;
   completed: boolean;
 }
 
-// Arreglo tipado para almacenar objetos Task
 const tasks: Task[] = [];
-
-// Contador para generar identificadores únicos
 let nextTaskId: number = 1;
+let headerMessage: string = 'Bienvenido: ' + userName;
+let resultLines: string[] = [];
 
-// Función flecha para agregar una tarea
-const addTask = (title: string): void => {
-  const newTask: Task = {
-    id: nextTaskId,
-    title: title,
-    completed: false
-  };
+// Dibuja la cabecera y el resultado de la última operación.
+// No limpia la terminal ni vuelve a imprimir el menú.
+const showHeader = (): void => {
+  console.log('==============================================');
+  console.log(systemName + ' VERSION: ' + version);
+  console.log(headerMessage);
+  console.log('Total de tareas: ' + tasks.length);
+  console.log('==============================================');
 
-  tasks.push(newTask);
-  nextTaskId++;
+  resultLines.forEach((line) => console.log(line));
 
-  console.log('Tarea agregada: ' + newTask.title + ' (ID: ' + newTask.id + ')');
-};
-
-// Función para listar tareas usando destructuring, map() y forEach()
-const listTasks = (): void => {
-  console.log('\n===== LISTA DE TAREAS =====');
-
-  if (tasks.length === 0) {
-    console.log('No hay tareas registradas.');
-    return;
-  }
-
-  const formattedTasks: string[] = tasks.map((task) => {
-    const { id, title, completed } = task;
-    const status: string = completed ? 'completed' : 'pending';
-
-    return '[' + id + '] ' + title + ' - ' + status;
-  });
-
-  formattedTasks.forEach((task) => {
-    console.log(task);
-  });
-};
-
-// Función flecha para eliminar la última tarea
-const removeTask = (): void => {
-  const removedTask = tasks.pop();
-
-  if (removedTask !== undefined) {
-    console.log('Tarea eliminada: ' + removedTask.title);
-  } else {
-    console.log('No hay tareas para eliminar.');
+  if (resultLines.length > 0) {
+    console.log('==============================================');
   }
 };
 
-// Función para marcar una tarea como completada usando find()
-const markCompleted = (id: number): void => {
-  const task = tasks.find((task) => task.id === id);
+const updateScreen = (message: string, details: string[] = []): void => {
+  headerMessage = message;
+  resultLines = details;
+  showHeader();
+};
 
-  if (task) {
-    if (task.completed) {
-      console.log('La tarea ya estaba completada: ' + task.title);
-    } else {
-      task.completed = true;
-      console.log('Tarea completada: ' + task.title);
+const showMenu = (): void => {
+  console.log('\nSeleccione una opción:');
+  console.log('1. Agregar tarea');
+  console.log('2. Eliminar tarea por ID');
+  console.log('3. Ver todas las tareas');
+  console.log('4. Marcar tarea como completada');
+  console.log('5. Listar tareas pendientes');
+  console.log('6. Listar tareas completadas');
+  console.log('7. Salir');
+};
+
+// Simula el guardado de una tarea en una base de datos.
+const saveToDB = (task: Task): Promise<Task> => {
+  console.log('\nGuardando tarea en la base de datos ...');
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log('Tarea guardada en la base de datos: ' + task.title);
+      resolve(task);
+    }, 2000);
+  });
+};
+
+// Agrega una tarea usando async/await y try/catch.
+const addTask = async (title: string): Promise<void> => {
+  try {
+    if (title.trim() === '') {
+      throw new Error('El título de la tarea no puede estar vacío.');
     }
-  } else {
-    console.log('No se encontró una tarea con el ID ' + id);
+
+    const newTask: Task = {
+      id: nextTaskId,
+      title: title.trim(),
+      completed: false
+    };
+
+    await saveToDB(newTask);
+
+    tasks.push(newTask);
+    nextTaskId++;
+
+    updateScreen(
+      'Tarea agregada: ' + newTask.title + ' ✅',
+      ['Tarea agregada correctamente.']
+    );
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Ocurrió un error inesperado.';
+
+    updateScreen('Error al agregar la tarea', [message]);
   }
 };
 
-// Función para obtener las tareas pendientes usando filter()
-const filterPending = (): Task[] => {
-  return tasks.filter((task) => !task.completed);
+// Lista todas las tareas.
+const listTasks = (): void => {
+  const details = tasks.map((task) => {
+    const status = task.completed ? 'Completada' : 'Pendiente';
+    return '[' + task.id + '] ' + task.title + ' - ' + status;
+  });
+
+  updateScreen(
+    'Lista de tareas:',
+    details.length > 0 ? details : ['No hay tareas registradas.']
+  );
 };
 
-// Función para obtener las tareas completadas usando filter()
-const filterCompleted = (): Task[] => {
-  return tasks.filter((task) => task.completed);
+// Elimina una tarea específica por ID.
+const removeTask = (id: number): void => {
+  const taskIndex = tasks.findIndex((task) => task.id === id);
+
+  if (taskIndex === -1) {
+    throw new Error('Tarea no encontrada.');
+  }
+
+  const removedTask = tasks.splice(taskIndex, 1)[0];
+
+  updateScreen(
+    'Tarea eliminada: ' + removedTask.title,
+    ['Tarea eliminada correctamente.']
+  );
 };
 
-// Función para mostrar una lista filtrada de tareas
-const showFilteredTasks = (filteredTasks: Task[], heading: string): void => {
-  console.log('\n===== ' + heading + ' =====');
+// Marca una tarea como completada.
+const markCompleted = (id: number): void => {
+  const task = tasks.find((item) => item.id === id);
 
-  if (filteredTasks.length === 0) {
-    console.log('No hay tareas en esta categoría.');
+  if (!task) {
+    throw new Error('Tarea no encontrada.');
+  }
+
+  if (task.completed) {
+    updateScreen(
+      'Tarea marcada como completada',
+      ['La tarea ya estaba completada: ' + task.title]
+    );
     return;
   }
 
-  filteredTasks
-    .map(({ id, title, completed }) => {
-      const status: string = completed ? 'completed' : 'pending';
-      return '[' + id + '] ' + title + ' - ' + status;
-    })
-    .forEach((task) => console.log(task));
+  task.completed = true;
+
+  updateScreen(
+    'Tarea marcada como completada: ' + task.title,
+    ['La tarea se actualizó correctamente.']
+  );
 };
 
-// Menú interactivo
+// Filtra las tareas pendientes.
+const filterPending = (): void => {
+  const pending = tasks.filter((task) => !task.completed);
+
+  const details = pending.map(
+    (task) => '[' + task.id + '] ' + task.title + ' - Pendiente'
+  );
+
+  updateScreen(
+    'Tareas pendientes:',
+    details.length > 0 ? details : ['No hay tareas pendientes.']
+  );
+};
+
+// Filtra las tareas completadas.
+const filterCompleted = (): void => {
+  const completed = tasks.filter((task) => task.completed);
+
+  const details = completed.map(
+    (task) => '[' + task.id + '] ' + task.title + ' - Completada'
+  );
+
+  updateScreen(
+    'Tareas completadas:',
+    details.length > 0 ? details : ['No hay tareas completadas.']
+  );
+};
+
+// Solicita y valida un ID.
+const askForId = async (message: string): Promise<number | null> => {
+  const idInput = await rl.question(message);
+  const id = Number(idInput);
+
+  if (idInput.trim() === '' || !Number.isInteger(id) || id <= 0) {
+    updateScreen('ID inválido', ['Ingresa un ID entero positivo.']);
+    return null;
+  }
+
+  return id;
+};
+
+// Menú principal.
 async function main(): Promise<void> {
   let option: string = '';
 
-  while (option !== '7') {
-    console.log('\n===== MENÚ DE TAREAS =====');
-    console.log('1. Agregar tarea');
-    console.log('2. Eliminar última tarea');
-    console.log('3. Listar todas las tareas');
-    console.log('4. Marcar tarea como completada');
-    console.log('5. Listar tareas pendientes');
-    console.log('6. Listar tareas completadas');
-    console.log('7. Salir');
+  showHeader();
 
-    option = await rl.question('Selecciona una opción: ');
+  while (option !== '7') {
+    showMenu();
+
+    option = await rl.question('\nOpción: ');
 
     if (option === '1') {
       const title = await rl.question('Escribe el título de la tarea: ');
-
-      if (title.trim() !== '') {
-        addTask(title.trim());
-      } else {
-        console.log('El título no puede estar vacío.');
-      }
+      await addTask(title);
     } else if (option === '2') {
-      removeTask();
+      const id = await askForId('Escribe el ID de la tarea que deseas eliminar: ');
+
+      if (id !== null) {
+        try {
+          removeTask(id);
+        } catch (error: unknown) {
+          updateScreen(
+            'Error al eliminar la tarea',
+            [error instanceof Error ? error.message : 'Error inesperado.']
+          );
+        }
+      }
     } else if (option === '3') {
       listTasks();
     } else if (option === '4') {
-      const idInput = await rl.question('Escribe el ID de la tarea: ');
-      const id = Number(idInput);
+      const id = await askForId('Escribe el ID de la tarea: ');
 
-      if (idInput.trim() !== '' && Number.isInteger(id) && id > 0) {
-        markCompleted(id);
-      } else {
-        console.log('Ingresa un ID válido.');
+      if (id !== null) {
+        try {
+          markCompleted(id);
+        } catch (error: unknown) {
+          updateScreen(
+            'Error al completar la tarea',
+            [error instanceof Error ? error.message : 'Error inesperado.']
+          );
+        }
       }
     } else if (option === '5') {
-      showFilteredTasks(filterPending(), 'TAREAS PENDIENTES');
+      filterPending();
     } else if (option === '6') {
-      showFilteredTasks(filterCompleted(), 'TAREAS COMPLETADAS');
+      filterCompleted();
     } else if (option === '7') {
-      console.log('Saliendo del menú. ¡Hasta pronto, ' + userName + '!');
+      updateScreen('Hasta pronto, ' + userName, ['Saliendo del programa.']);
     } else {
-      console.log('Opción no válida. Selecciona del 1 al 7.');
+      updateScreen('Opción no válida', ['Selecciona una opción del 1 al 7.']);
     }
   }
 }
 
-// 🚫 No eliminar las líneas de abajo ⬇️
 main()
   .catch((error: unknown) => {
     console.error('Error al ejecutar el menú:', error);
